@@ -5,7 +5,7 @@ import net.minecraft.world.level.LevelSettings;
 
 public record Template(
         GameType gameMode,
-        LevelSettings.DifficultySettings difficultySettings,
+        LevelSettings.DifficultySettings difficultySettings
 
 )
 {
