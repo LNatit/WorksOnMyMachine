@@ -327,6 +327,15 @@ public interface VanillaPipeline
                                    context.dataConfiguration());
     }
 
+    /**
+     * @param mc
+     * @param levelSourceAccess
+     * @param serverResources
+     * @param registryAccess
+     * @param worldDataAndGenSettings
+     * @param gameRules
+     * @see WorldOpenFlows#createLevelFromExistingSettings(LevelStorageSource.LevelStorageAccess, ReloadableServerResources, LayeredRegistryAccess, LevelDataAndDimensions.WorldDataAndGenSettings, Optional)
+     */
     static void createLevelFromExistingSettings(
             Minecraft mc,
             LevelStorageSource.LevelStorageAccess levelSourceAccess,
