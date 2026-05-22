@@ -1,6 +1,5 @@
 package com.lnatit.womm;
 
-import com.lnatit.womm.reference.VanillaPipeline;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.api.distmarker.Dist;
@@ -13,7 +12,6 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 @Mod(value = WOMM.MODID, dist = Dist.CLIENT)
 public class WOMMClient
 {
-
     public static boolean isInWOMMWorld = false;
 
     public WOMMClient(IEventBus modEventBus, ModContainer modContainer) {
@@ -25,9 +23,12 @@ public class WOMMClient
     }
 
     public static void handlePayload(WOMMPayload payload, IPayloadContext context) {
-        WOMM.LOGGER.debug("Received payload with message: {}", payload.msg());
+        WOMM.LOGGER.debug("Received payload: {}", payload.identity());
+
+
+
         disconnect();
-        VanillaPipeline.createNewWorld(payload.msg());
+
     }
 
     private static void disconnect() {

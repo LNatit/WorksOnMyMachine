@@ -1,14 +1,28 @@
 package com.lnatit.womm;
 
-import io.netty.buffer.ByteBuf;
+import com.lnatit.womm.data.Templatel;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public record WOMMPayload(String msg) implements CustomPacketPayload {
-    public static final CustomPacketPayload.Type<WOMMPayload> TYPE = new CustomPacketPayload.Type<>(WOMM.id("payload"));
+import java.util.Optional;
 
-    public static final StreamCodec<ByteBuf, WOMMPayload> STREAM_CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, WOMMPayload::msg, WOMMPayload::new);
+public record WOMMPayload(String identity, Optional<Templatel> template) implements CustomPacketPayload
+{
+    public static final CustomPacketPayload.Type<WOMMPayload> TYPE = new CustomPacketPayload.Type<>(WOMM.id("world_template"));
+
+    public static final StreamCodec<FriendlyByteBuf, WOMMPayload> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8,
+            WOMMPayload::identity,
+            Templatel.STREAM_CODEC.apply(ByteBufCodecs::optional),
+            WOMMPayload::template,
+            WOMMPayload::new
+    );
+
+    public WOMMPayload(String identity) {
+        this(identity, Optional.empty());
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

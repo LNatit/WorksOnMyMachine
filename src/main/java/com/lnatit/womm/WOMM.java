@@ -16,9 +16,6 @@ public class WOMM {
     public static final String MODID = "womm";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-
-
-
     public WOMM(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(WOMM::registerPayload);
     }

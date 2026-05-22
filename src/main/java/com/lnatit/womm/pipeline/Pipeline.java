@@ -22,8 +22,6 @@ import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
-import net.minecraft.world.level.levelgen.WorldOptions;
-import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.storage.LevelDataAndDimensions;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
@@ -31,14 +29,13 @@ import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.validation.ContentValidationException;
 
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public interface Pipeline
 {
-    static Context prepareResources(Template template) throws WorldPrepareException {
+    static Loader prepareResources(LoadContext template) throws WorldPrepareException {
         Minecraft mc = Minecraft.getInstance();
         String worldName = template.worldName();
 
@@ -57,7 +54,7 @@ public interface Pipeline
         boolean failed = true;
 
         try {
-            Context result;
+            Loader result;
             if (access.hasWorldData()) {
                 Dynamic<?> levelDataUnfixed;
                 try {
@@ -92,7 +89,7 @@ public interface Pipeline
                     return new WorldLoader.DataLoadOutput<>(data.worldDataAndGenSettings(),
                                                             data.dimensions().dimensionsRegistryAccess());
                 }, WorldStem::new);
-                result = new Context(access, packRepository, worldStem, Optional.empty(), false);
+                result = createLoader(access, packRepository, worldStem, Optional.empty(), false);
             }
             else {
                 LevelSettings levelSettings = template.levelSettings();
@@ -109,7 +106,7 @@ public interface Pipeline
                             completeDimensions.lifecycle()), new WorldGenSettings(template.options(), dimensions)),
                                                             completeDimensions.dimensionsRegistryAccess());
                 }, WorldStem::new);
-                result = new Context(access, packRepository, worldStem, template.gameRules(), true);
+                result = createLoader(access, packRepository, worldStem, template.gameRules(), true);
             }
             failed = false;
             return result;
@@ -155,41 +152,16 @@ public interface Pipeline
         return resourceLoad.get();
     }
 
-    record Template(String identity,
-                    LevelSettings levelSettings,
-                    WorldPreset preset,
-                    WorldOptions options,
-                    Optional<GameRules> gameRules)
-    {
-        String worldName() {
-            return identity;
-        }
+    @FunctionalInterface
+    interface Loader {
+        void loadWorld(Minecraft mc);
     }
 
-    final class Context
-    {
-        private final LevelStorageSource.LevelStorageAccess access;
-        private final PackRepository repository;
-        private final WorldStem worldStem;
-        private final Optional<GameRules> gameRules;
-        private final boolean newWorld;
-
-        public Context(
-                LevelStorageSource.LevelStorageAccess access,
-                PackRepository repository,
-                WorldStem worldStem,
-                Optional<GameRules> gameRules,
-                boolean newWorld
-        ) {
-            this.access = Objects.requireNonNull(access, "access");
-            this.repository = Objects.requireNonNull(repository, "repository");
-            this.worldStem = Objects.requireNonNull(worldStem, "worldStem");
-            this.gameRules = Objects.requireNonNull(gameRules, "gameRules");
-            this.newWorld = newWorld;
-        }
-
-        public void load(Minecraft mc) {
-            mc.doWorldLoad(access, repository, worldStem, gameRules, newWorld);
-        }
+    private static Loader createLoader(LevelStorageSource.LevelStorageAccess access,
+                                       PackRepository repository,
+                                       WorldStem worldStem,
+                                       Optional<GameRules> gameRules,
+                                       boolean newWorld) {
+        return mc -> mc.doWorldLoad(access, repository, worldStem, gameRules, newWorld);
     }
 }

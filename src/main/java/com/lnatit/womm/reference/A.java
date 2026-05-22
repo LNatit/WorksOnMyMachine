@@ -1,4 +1,4 @@
-package com.lnatit.womm;
+package com.lnatit.womm.reference;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
