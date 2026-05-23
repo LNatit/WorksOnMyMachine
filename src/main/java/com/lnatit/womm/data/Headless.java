@@ -1,10 +1,8 @@
 package com.lnatit.womm.data;
 
 import com.mojang.serialization.Codec;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -14,20 +12,39 @@ import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import java.util.Optional;
 
 public record Headless(
-        Optional<Identifier> identity,
+        Optional<String> identity,
         boolean alwaysRecreate,
         GameType gameType,
         Difficulty difficulty,
         boolean hardcore,
         boolean locked,
         WorldDataConfiguration dataConfig,
-        WorldPreset preset,
+        Holder<WorldPreset> preset,
         Optional<Long> seed,
         boolean generateStructures,
         boolean generateBonusChest,
-        Optional<GameRuleMap> gameRules) implements Template<Optional<Identifier>>
+        Optional<GameRuleMap> gameRules) implements ITemplate<Optional<String>, Holder<WorldPreset>>
 {
-    public static final Codec<Headless> CODEC = Template.codec(Identifier.CODEC::optionalFieldOf, Headless::new);
+    private static final Codec<Holder<WorldPreset>> PRESET_CODEC = WorldPreset.DIRECT_CODEC.xmap(Holder::direct, Holder::value).withAlternative(WorldPreset.CODEC);
+    public static final Codec<Headless> CODEC = ITemplate.codec(Codec.STRING::optionalFieldOf, PRESET_CODEC::fieldOf, Headless::new);
 
-    public static final StreamCodec<ByteBuf, Headless> STREAM_CODEC = Template.streamCodec(Identifier.STREAM_CODEC.apply(ByteBufCodecs::optional), Headless::new);
+    public Template withId(String identity) {
+        ResourceKey<WorldPreset> key = this.preset.unwrapKey()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Direct (inline) WorldPreset holders cannot be used as a Template preset; use a registry reference instead"));
+        return new Template(
+                identity,
+                this.alwaysRecreate,
+                this.gameType,
+                this.difficulty,
+                this.hardcore,
+                this.locked,
+                this.dataConfig,
+                key,
+                this.seed,
+                this.generateStructures,
+                this.generateBonusChest,
+                this.gameRules
+        );
+    }
 }

@@ -1,0 +1,13 @@
+{
+  "identity": "fixed_seed_with_hardcore_and_locked_peaceful",
+  "always_recreate": false,
+  "game_type": "survival",
+  "difficulty": "peaceful",
+  "hardcore": true,
+  "locked": true,
+  "preset": "minecraft:normal",
+  "seed": 123456789,
+  "generate_structures": true,
+  "generate_bonus_chest": true
+}
+

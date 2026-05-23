@@ -1,0 +1,11 @@
+{
+  "always_recreate": true,
+  "game_type": "survival",
+  "difficulty": "normal",
+  "hardcore": false,
+  "locked": false,
+  "preset": "minecraft:normal",
+  "generate_structures": true,
+  "generate_bonus_chest": false
+}
+

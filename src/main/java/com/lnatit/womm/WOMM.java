@@ -1,5 +1,6 @@
 package com.lnatit.womm;
 
+import com.lnatit.womm.command.ArgumentRegistry;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -18,6 +19,7 @@ public class WOMM {
 
     public WOMM(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(WOMM::registerPayload);
+        ArgumentRegistry.ARGUMENT_TYPES.register(modEventBus);
     }
 
     public static void registerPayload(RegisterPayloadHandlersEvent event) {

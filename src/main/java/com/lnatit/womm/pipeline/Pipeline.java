@@ -4,6 +4,7 @@ import com.lnatit.womm.WOMM;
 import com.mojang.serialization.Dynamic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtException;
@@ -22,6 +23,7 @@ import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
+import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.storage.LevelDataAndDimensions;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
@@ -44,10 +46,10 @@ public interface Pipeline
             access = mc.getLevelSource().validateAndCreateAccess(worldName);
         }
         catch (IOException exception) {
-            throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_ACCESS_IO, exception);
+            throw new WorldPrepareException(FailCode.WORLD_ACCESS_IO, exception);
         }
         catch (ContentValidationException exception) {
-            throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_ACCESS_VALIDATION, exception);
+            throw new WorldPrepareException(FailCode.WORLD_ACCESS_VALIDATION, exception);
         }
 
         PackRepository packRepository = ServerPacksSource.createPackRepository(access);
@@ -61,16 +63,16 @@ public interface Pipeline
                     levelDataUnfixed = access.getUnfixedDataTagWithFallback();
                 }
                 catch (NbtException | ReportedNbtException | IOException exception) {
-                    throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_DATA_READ_FAILED, exception);
+                    throw new WorldPrepareException(FailCode.WORLD_DATA_READ_FAILED, exception);
                 }
 
                 LevelSummary summary = access.fixAndGetSummaryFromTag(levelDataUnfixed);
                 if (summary.requiresManualConversion()) {
-                    throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_REQUIRES_MANUAL_CONVERSION);
+                    throw new WorldPrepareException(FailCode.WORLD_REQUIRES_MANUAL_CONVERSION);
                 }
 
                 if (!summary.isCompatible()) {
-                    throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_INCOMPATIBLE_VERSION);
+                    throw new WorldPrepareException(FailCode.WORLD_INCOMPATIBLE_VERSION);
                 }
 
                 // actually Dymamic<WorldDataConfiguration>
@@ -97,7 +99,13 @@ public interface Pipeline
                 WorldLoader.PackConfig packConfig =
                         new WorldLoader.PackConfig(packRepository, dataConfiguration, false, false);
                 WorldStem worldStem = createStemBlocking(mc, packConfig, context -> {
-                    WorldDimensions dimensions = template.preset().createWorldDimensions();
+                    Holder<WorldPreset> presetHolder = context
+                            .datapackWorldgen()
+                            .lookupOrThrow(Registries.WORLD_PRESET)
+                            .get(template.preset())
+                            .orElseThrow(() -> new RuntimeException(new WorldPrepareException(FailCode.WORLD_PRESET_NOT_FOUND)));
+
+                    WorldDimensions dimensions = presetHolder.value().createWorldDimensions();
                     WorldDimensions.Complete completeDimensions =
                             dimensions.bake(context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM));
                     return new WorldLoader.DataLoadOutput<>(new LevelDataAndDimensions.WorldDataAndGenSettings(new PrimaryLevelData(
@@ -116,13 +124,20 @@ public interface Pipeline
         }
         catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_STEM_BUILD_FAILED, exception);
+            throw new WorldPrepareException(FailCode.WORLD_STEM_BUILD_FAILED, exception);
         }
         catch (ExecutionException exception) {
-            throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_STEM_BUILD_FAILED, exception);
+            Throwable cause = exception.getCause();
+            if (cause instanceof RuntimeException runtime && runtime.getCause() instanceof WorldPrepareException worldPrepareException) {
+                throw worldPrepareException;
+            }
+            if (cause instanceof WorldPrepareException worldPrepareException) {
+                throw worldPrepareException;
+            }
+            throw new WorldPrepareException(FailCode.WORLD_STEM_BUILD_FAILED, exception);
         }
         catch (Exception exception) {
-            throw new WorldPrepareException(WorldPrepareException.Reason.WORLD_PREPARE_UNKNOWN, exception);
+            throw new WorldPrepareException(FailCode.WORLD_PREPARE_UNKNOWN, exception);
         }
         finally {
             if (failed) {

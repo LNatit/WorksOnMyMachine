@@ -1,5 +1,10 @@
 package com.lnatit.womm;
 
+import com.lnatit.womm.data.Template;
+import com.lnatit.womm.data.TemplateManager;
+import com.lnatit.womm.pipeline.LoadContext;
+import com.lnatit.womm.pipeline.Pipeline;
+import com.lnatit.womm.pipeline.WorldPrepareException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.api.distmarker.Dist;
@@ -23,12 +28,34 @@ public class WOMMClient
     }
 
     public static void handlePayload(WOMMPayload payload, IPayloadContext context) {
-        WOMM.LOGGER.debug("Received payload: {}", payload.identity());
+        String identity = payload.identity();
+        WOMM.LOGGER.debug("Received payload: {}", identity);
 
+        Template template;
+        if (payload.template().isPresent()) {
+            template = payload.template().get();
+        } else {
+            var op = TemplateManager.INSTANCE.getTemplate(identity);
+            if (op.isPresent()) {
+                template = op.get();
+            } else {
+                WOMM.LOGGER.info("Received payload with unknown template identity '{}', ignored!", identity);
+                return;
+            }
+        }
 
+        LoadContext loadContext = template.assemble();
 
         disconnect();
 
+        Pipeline.Loader loader;
+        try {
+            loader = Pipeline.prepareResources(loadContext);
+            loader.loadWorld(Minecraft.getInstance());
+        }
+        catch (WorldPrepareException e) {
+            WOMM.LOGGER.error("Failed to prepare world resources for '{}': {}", identity, e.getMessage());
+        }
     }
 
     private static void disconnect() {
