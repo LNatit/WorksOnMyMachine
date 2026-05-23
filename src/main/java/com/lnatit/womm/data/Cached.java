@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -13,8 +12,8 @@ import net.minecraft.world.level.levelgen.presets.WorldPreset;
 
 import java.util.Optional;
 
-public record Headless(
-        Optional<Identifier> identity,
+public record Cached(
+        String identity,
         boolean alwaysRecreate,
         GameType gameType,
         Difficulty difficulty,
@@ -25,9 +24,10 @@ public record Headless(
         Optional<Long> seed,
         boolean generateStructures,
         boolean generateBonusChest,
-        Optional<GameRuleMap> gameRules) implements Template<Optional<Identifier>>
+        Optional<GameRuleMap> gameRules
+) implements Template<String>
 {
-    public static final Codec<Headless> CODEC = Template.codec(Identifier.CODEC::optionalFieldOf, Headless::new);
+    public static final Codec<Cached> CODEC = Template.codec(Codec.STRING::fieldOf, Cached::new);
 
-    public static final StreamCodec<ByteBuf, Headless> STREAM_CODEC = Template.streamCodec(Identifier.STREAM_CODEC.apply(ByteBufCodecs::optional), Headless::new);
+    public static final StreamCodec<ByteBuf, Cached> STREAM_CODEC = Template.streamCodec(ByteBufCodecs.STRING_UTF8, Cached::new);
 }

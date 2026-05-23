@@ -12,7 +12,7 @@ import java.util.Map;
 public class Manager extends SimpleJsonResourceReloadListener<Headless>
 {
     public static final Manager INSTANCE = new Manager();
-    public final Map<String, Templatel> templates = new HashMap<>();
+    public final Map<String, Cached> templates = new HashMap<>();
 
     private Manager() {
         super(Headless.CODEC, FileToIdConverter.json("world_templates"));
