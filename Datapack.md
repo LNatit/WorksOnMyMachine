@@ -37,6 +37,10 @@ JSON 根对象下包含以下字段（带 `#` 标记的为可选条目）：
 - **`seed`**：世界生成种子。未指定时随机生成。
 - **`gameRules`**：游戏规则列表。未指定时使用原版默认值。详细格式请参考：`net.minecraft.world.level.gamerules.GameRuleMap`
 
+**必填字段补充说明：**
+
+- **`alwaysRecreate`**：当设置为 `true` 时，每次调用都将创建一个新世界；设置为 `false` 时，则会优先进入具有相同 `identity` 的已创建世界。
+
 ---
 
 **特殊说明：**
