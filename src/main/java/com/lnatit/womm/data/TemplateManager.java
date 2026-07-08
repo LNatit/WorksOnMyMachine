@@ -61,7 +61,7 @@ public class TemplateManager extends SimpleJsonResourceReloadListener<Headless>
                     identity = fallbackIdentity;
                 }
             }
-            this.templates.put(identity, template.withId(identity));
+            this.templates.put(identity, template.withId(entry.getKey().withPath(identity), false));
         }
 
         profiler.pop();

@@ -43,6 +43,7 @@ public interface Pipeline
 
         LevelStorageSource.LevelStorageAccess access;
         try {
+            // TODO copy save template first
             access = mc.getLevelSource().validateAndCreateAccess(worldName);
         }
         catch (IOException exception) {
