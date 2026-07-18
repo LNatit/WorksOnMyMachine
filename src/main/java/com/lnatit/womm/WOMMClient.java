@@ -9,12 +9,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 @Mod(value = WOMM.MODID, dist = Dist.CLIENT)
+@EventBusSubscriber(value = Dist.CLIENT, modid = WOMM.MODID)
 public class WOMMClient
 {
     public static boolean isInWOMMWorld = false;
@@ -25,6 +29,11 @@ public class WOMMClient
 
     public static void registerPayloadHandler(RegisterClientPayloadHandlersEvent event) {
         event.register(WOMMPayload.TYPE, WOMMClient::handlePayload);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        isInWOMMWorld = false;
     }
 
     public static void handlePayload(WOMMPayload payload, IPayloadContext context) {
@@ -56,6 +65,8 @@ public class WOMMClient
         catch (WorldPrepareException e) {
             WOMM.LOGGER.error("Failed to prepare world resources for '{}': {}", identity, e.getMessage());
         }
+
+        isInWOMMWorld = true;
     }
 
     private static void disconnect() {

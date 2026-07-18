@@ -3,6 +3,7 @@ package com.lnatit.womm.pipeline;
 import com.lnatit.womm.WOMM;
 import com.mojang.serialization.Dynamic;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.worldselection.WorldOpenFlows;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -14,6 +15,7 @@ import net.minecraft.server.WorldStem;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
+import net.minecraft.util.FileUtil;
 import net.minecraft.util.Util;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.util.worldupdate.UpgradeProgress;
@@ -29,8 +31,15 @@ import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.validation.ContentValidationException;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -39,12 +48,20 @@ public interface Pipeline
 {
     static Loader prepareResources(LoadContext template) throws WorldPrepareException {
         Minecraft mc = Minecraft.getInstance();
-        String worldName = template.worldName();
 
         LevelStorageSource.LevelStorageAccess access;
         try {
-            // TODO copy save template first
-            access = mc.getLevelSource().validateAndCreateAccess(worldName);
+            String worldName = template.worldName();
+            LevelStorageSource levelSrc = mc.getLevelSource();
+            worldName = FileUtil.sanitizeName(worldName);
+            Path templatePath = mc.gameDirectory.toPath().resolve("womm_templates").resolve(worldName);
+            Path savePath = levelSrc.getLevelPath(worldName);
+
+            if (Files.isDirectory(templatePath)) {
+                copyDirectoryContents(templatePath, savePath);
+            }
+
+            access = levelSrc.validateAndCreateAccess(worldName);
         }
         catch (IOException exception) {
             throw new WorldPrepareException(FailCode.WORLD_ACCESS_IO, exception);
@@ -100,11 +117,11 @@ public interface Pipeline
                 WorldLoader.PackConfig packConfig =
                         new WorldLoader.PackConfig(packRepository, dataConfiguration, false, false);
                 WorldStem worldStem = createStemBlocking(mc, packConfig, context -> {
-                    Holder<WorldPreset> presetHolder = context
-                            .datapackWorldgen()
-                            .lookupOrThrow(Registries.WORLD_PRESET)
-                            .get(template.preset())
-                            .orElseThrow(() -> new RuntimeException(new WorldPrepareException(FailCode.WORLD_PRESET_NOT_FOUND)));
+                    Holder<WorldPreset> presetHolder = context.datapackWorldgen()
+                                                              .lookupOrThrow(Registries.WORLD_PRESET)
+                                                              .get(template.preset())
+                                                              .orElseThrow(() -> new RuntimeException(new WorldPrepareException(
+                                                                      FailCode.WORLD_PRESET_NOT_FOUND)));
 
                     WorldDimensions dimensions = presetHolder.value().createWorldDimensions();
                     WorldDimensions.Complete completeDimensions =
@@ -129,7 +146,8 @@ public interface Pipeline
         }
         catch (ExecutionException exception) {
             Throwable cause = exception.getCause();
-            if (cause instanceof RuntimeException runtime && runtime.getCause() instanceof WorldPrepareException worldPrepareException) {
+            if (cause instanceof RuntimeException runtime
+                && runtime.getCause() instanceof WorldPrepareException worldPrepareException) {
                 throw worldPrepareException;
             }
             if (cause instanceof WorldPrepareException worldPrepareException) {
@@ -147,9 +165,9 @@ public interface Pipeline
         }
     }
 
-    //    /**
-    //     * @see WorldOpenFlows#loadWorldDataBlocking(WorldLoader.PackConfig, WorldLoader.WorldDataSupplier, WorldLoader.ResultFactory)
-    //     */
+    /**
+     * @see WorldOpenFlows#loadWorldDataBlocking(WorldLoader.PackConfig, WorldLoader.WorldDataSupplier, WorldLoader.ResultFactory)
+     */
     static <D> WorldStem createStemBlocking(
             Minecraft mc,
             WorldLoader.PackConfig packConfig,
@@ -169,15 +187,45 @@ public interface Pipeline
     }
 
     @FunctionalInterface
-    interface Loader {
+    interface Loader
+    {
         void loadWorld(Minecraft mc);
     }
 
-    private static Loader createLoader(LevelStorageSource.LevelStorageAccess access,
-                                       PackRepository repository,
-                                       WorldStem worldStem,
-                                       Optional<GameRules> gameRules,
-                                       boolean newWorld) {
+    private static Loader createLoader(
+            LevelStorageSource.LevelStorageAccess access,
+            PackRepository repository,
+            WorldStem worldStem,
+            Optional<GameRules> gameRules,
+            boolean newWorld
+    ) {
         return mc -> mc.doWorldLoad(access, repository, worldStem, gameRules, newWorld);
+    }
+
+    private static void copyDirectoryContents(Path templatePath, Path savePath) throws IOException {
+        Files.createDirectories(savePath);
+
+        Files.walkFileTree(templatePath, new SimpleFileVisitor<>()
+        {
+            @Override
+            public @NotNull FileVisitResult preVisitDirectory(
+                    @NotNull Path dir,
+                    @NotNull BasicFileAttributes attrs
+            ) throws IOException {
+                Path relative = templatePath.relativize(dir);
+                Files.createDirectories(savePath.resolve(relative));
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public @NotNull FileVisitResult visitFile(
+                    @NotNull Path file,
+                    @NotNull BasicFileAttributes attrs
+            ) throws IOException {
+                Path relative = templatePath.relativize(file);
+                Files.copy(file, savePath.resolve(relative), StandardCopyOption.REPLACE_EXISTING);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }

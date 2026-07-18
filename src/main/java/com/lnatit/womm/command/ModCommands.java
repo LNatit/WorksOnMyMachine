@@ -19,13 +19,13 @@ public interface ModCommands
     static void registerCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(Commands.literal("womm")
-                                    .then(Commands.argument("identity", IdentityArgument.INSTANCE).executes(ModCommands::run)));
+                                    .then(Commands.argument("identity", IdentityArgument.INSTANCE).executes(ModCommands::runId)));
     }
 
-    static int run(CommandContext<CommandSourceStack> context) {
+    static int runId(CommandContext<CommandSourceStack> context) {
         WOMM.LOGGER.debug("Test command executed!");
         CommandSourceStack source = context.getSource();
-        if (source.isPlayer() && !source.getServer().isSingleplayer()) {
+        if (source.isPlayer()) {
             assert source.getPlayer() != null;
             PacketDistributor.sendToPlayer(source.getPlayer(), new WOMMPayload(StringArgumentType.getString(context, "identity")));
             WOMM.LOGGER.debug("Payload sent!");
