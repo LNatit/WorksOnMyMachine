@@ -1,12 +1,16 @@
 {
-  "identity": "void",
-  "always_recreate": false,
-  "game_type": "creative",
-  "difficulty": "normal",
-  "hardcore": false,
-  "locked": false,
-  "preset": "minecraft:flat",
-  "generate_structures": false,
-  "generate_bonus_chest": false
+    "identity": "void",
+    "always_recreate": false,
+    "game_type": "creative",
+    "difficulty": "normal",
+    "hardcore": false,
+    "locked": false,
+    "preset": "minecraft:flat",
+    "dimensions_updater": {
+        "registry": "minecraft:worldgen/flat_level_generator_preset",
+        "identifier": "minecraft:the_void"
+    },
+    "generate_structures": false,
+    "generate_bonus_chest": false
 }
 

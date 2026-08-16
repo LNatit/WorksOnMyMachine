@@ -1,7 +1,7 @@
 package com.lnatit.womm.data;
 
 import com.lnatit.womm.pipeline.LoadContext;
-import com.mojang.datafixers.util.Function13;
+import com.mojang.datafixers.util.Function14;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -30,6 +30,7 @@ public record Template(Identifier identity,
                        boolean locked,
                        WorldDataConfiguration dataConfig,
                        ResourceKey<WorldPreset> preset,
+                       Optional<ResourceKey<?>> dimensionsUpdater,
                        Optional<Long> seed,
                        boolean generateStructures,
                        boolean generateBonusChest,
@@ -53,17 +54,19 @@ public record Template(Identifier identity,
                     ITemplate::hardcore,
                     ByteBufCodecs.BOOL,
                     ITemplate::locked,
-                    StreamCodecs.DATA_CONFIG,
+                    Utils.DATA_CONFIG,
                     ITemplate::dataConfig,
-                    StreamCodecs.PRESET_KEY,
+                    Utils.PRESET_KEY,
                     ITemplate::preset,
+                    Utils.RAW_RKEY.apply(ByteBufCodecs::optional),
+                    ITemplate::dimensionsUpdater,
                     ByteBufCodecs.LONG.apply(ByteBufCodecs::optional),
                     ITemplate::seed,
                     ByteBufCodecs.BOOL,
                     ITemplate::generateStructures,
                     ByteBufCodecs.BOOL,
                     ITemplate::generateBonusChest,
-                    StreamCodecs.GAME_RULES.apply(ByteBufCodecs::optional),
+                    Utils.GAME_RULES.apply(ByteBufCodecs::optional),
                     ITemplate::gameRules,
                     Template::new);
 
@@ -85,11 +88,12 @@ public record Template(Identifier identity,
                                                  true,
                                                  dataConfig),
                                this.preset,
+                               this.dimensionsUpdater,
                                new WorldOptions(seed, generateStructures, generateBonusChest),
                                gameRules);
     }
 
-    private static <B, C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> StreamCodec<B, C> composite(
+    private static <B, C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> StreamCodec<B, C> composite(
             StreamCodec<? super B, T1> codec1,
             Function<C, T1> getter1,
             StreamCodec<? super B, T2> codec2,
@@ -116,9 +120,12 @@ public record Template(Identifier identity,
             Function<C, T12> getter12,
             StreamCodec<? super B, T13> codec13,
             Function<C, T13> getter13,
-            Function13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, C> constructor
+            StreamCodec<? super B, T14> codec14,
+            Function<C, T14> getter14,
+            Function14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, C> constructor
     ) {
-        return new StreamCodec<B, C>() {
+        return new StreamCodec<>()
+        {
             @Override
             public C decode(B input) {
                 T1 v1 = codec1.decode(input);
@@ -134,7 +141,8 @@ public record Template(Identifier identity,
                 T11 v11 = codec11.decode(input);
                 T12 v12 = codec12.decode(input);
                 T13 v13 = codec13.decode(input);
-                return constructor.apply(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13);
+                T14 v14 = codec14.decode(input);
+                return constructor.apply(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14);
             }
 
             @Override
@@ -152,6 +160,7 @@ public record Template(Identifier identity,
                 codec11.encode(output, getter11.apply(value));
                 codec12.encode(output, getter12.apply(value));
                 codec13.encode(output, getter13.apply(value));
+                codec14.encode(output, getter14.apply(value));
             }
         };
     }

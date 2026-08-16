@@ -1,0 +1,15 @@
+{
+    "identity": "fixed_biome_taiga",
+    "always_recreate": false,
+    "game_type": "creative",
+    "difficulty": "normal",
+    "hardcore": false,
+    "locked": false,
+    "preset": "minecraft:single_biome_surface",
+    "dimensions_updater": {
+        "registry": "minecraft:worldgen/biome",
+        "identifier": "minecraft:taiga"
+    },
+    "generate_structures": true,
+    "generate_bonus_chest": true
+}

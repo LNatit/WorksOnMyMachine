@@ -1,9 +1,10 @@
 package com.lnatit.womm.data;
 
-import com.mojang.datafixers.util.Function12;
+import com.mojang.datafixers.util.Function13;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -29,6 +30,8 @@ public interface ITemplate<I, P> {
 
     P preset();
 
+    Optional<ResourceKey<?>> dimensionsUpdater();
+
     Optional<Long> seed();
 
     boolean generateStructures();
@@ -37,7 +40,7 @@ public interface ITemplate<I, P> {
 
     Optional<GameRuleMap> gameRules();
 
-    static <T extends ITemplate<I, P>, I, P> Codec<T> codec(Function<String, MapCodec<I>> idMapFunc, Function<String, MapCodec<P>> presetMapFunc, Function12<I, Boolean, GameType, Difficulty, Boolean, Boolean, WorldDataConfiguration, P, Optional<Long>, Boolean, Boolean, Optional<GameRuleMap>, T> constructor) {
+    static <T extends ITemplate<I, P>, I, P> Codec<T> codec(Function<String, MapCodec<I>> idMapFunc, Function<String, MapCodec<P>> presetMapFunc, Function13<I, Boolean, GameType, Difficulty, Boolean, Boolean, WorldDataConfiguration, P, Optional<ResourceKey<?>>, Optional<Long>, Boolean, Boolean, Optional<GameRuleMap>, T> constructor) {
         return RecordCodecBuilder.create(instance -> instance.group(
                 idMapFunc.apply("identity").forGetter(ITemplate::identity),
                 Codec.BOOL.fieldOf("always_recreate").forGetter(ITemplate::alwaysRecreate),
@@ -47,6 +50,7 @@ public interface ITemplate<I, P> {
                 Codec.BOOL.fieldOf("locked").forGetter(ITemplate::locked),
                 WorldDataConfiguration.CODEC.lenientOptionalFieldOf("data_config", WorldDataConfiguration.DEFAULT).forGetter(ITemplate::dataConfig),
                 presetMapFunc.apply("preset").forGetter(ITemplate::preset),
+                Utils.RAW_RESOURCE_KEY.optionalFieldOf("dimensions_updater").forGetter(ITemplate::dimensionsUpdater),
                 Codec.LONG.optionalFieldOf("seed").forGetter(ITemplate::seed),
                 Codec.BOOL.fieldOf("generate_structures").forGetter(ITemplate::generateStructures),
                 Codec.BOOL.fieldOf("generate_bonus_chest").forGetter(ITemplate::generateBonusChest),

@@ -3,6 +3,7 @@ package com.lnatit.womm.pipeline;
 import com.lnatit.womm.WOMM;
 import com.mojang.serialization.Dynamic;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
 import net.minecraft.client.gui.screens.worldselection.WorldOpenFlows;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.Holder;
@@ -10,6 +11,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtException;
 import net.minecraft.nbt.ReportedNbtException;
+import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.WorldLoader;
 import net.minecraft.server.WorldStem;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -98,7 +100,7 @@ public interface Pipeline
                         DataFixers.getFileFixer().fix(access, levelDataUnfixed, new UpgradeProgress());
                 WorldLoader.PackConfig packConfig =
                         LevelStorageSource.getPackConfig(levelDataTag, packRepository, false);
-                WorldStem worldStem = createStemBlocking(mc, packConfig, context -> {
+                WorldStem worldStem = loadWorldDataBlocking(mc, packConfig, context -> {
                     Registry<LevelStem> datapackDimensions =
                             context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
                     LevelDataAndDimensions data = LevelStorageSource.getLevelDataAndDimensions(access,
@@ -116,22 +118,51 @@ public interface Pipeline
                 WorldDataConfiguration dataConfiguration = levelSettings.dataConfiguration();
                 WorldLoader.PackConfig packConfig =
                         new WorldLoader.PackConfig(packRepository, dataConfiguration, false, false);
-                WorldStem worldStem = createStemBlocking(mc, packConfig, context -> {
-                    Holder<WorldPreset> presetHolder = context.datapackWorldgen()
-                                                              .lookupOrThrow(Registries.WORLD_PRESET)
-                                                              .get(template.preset())
-                                                              .orElseThrow(() -> new RuntimeException(new WorldPrepareException(
-                                                                      FailCode.WORLD_PRESET_NOT_FOUND)));
+                WorldStem worldStem = loadWorldDataBlocking(mc,
+                                                            packConfig,
+                                                            context -> new WorldLoader.DataLoadOutput<>(context.datapackWorldgen(),
+                                                                                                        context.datapackDimensions()),
+                                                            (rm, dp, registries, datapack) -> {
+                                                                Holder<WorldPreset> presetHolder =
+                                                                        datapack.lookupOrThrow(Registries.WORLD_PRESET)
+                                                                                .get(template.preset())
+                                                                                .orElseThrow(() -> new RuntimeException(
+                                                                                        new WorldPrepareException(
+                                                                                                FailCode.WORLD_PRESET_NOT_FOUND)));
 
-                    WorldDimensions dimensions = presetHolder.value().createWorldDimensions();
-                    WorldDimensions.Complete completeDimensions =
-                            dimensions.bake(context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM));
-                    return new WorldLoader.DataLoadOutput<>(new LevelDataAndDimensions.WorldDataAndGenSettings(new PrimaryLevelData(
-                            levelSettings,
-                            completeDimensions.specialWorldProperty(),
-                            completeDimensions.lifecycle()), new WorldGenSettings(template.options(), dimensions)),
-                                                            completeDimensions.dimensionsRegistryAccess());
-                }, WorldStem::new);
+                                                                WorldDimensions dimensions =
+                                                                        presetHolder.value().createWorldDimensions();
+
+                                                                // TODO update with dimensionsUpdater
+                                                                var worldGen =
+                                                                        registries.getLayer(RegistryLayer.WORLDGEN);
+                                                                WorldCreationContext.DimensionsUpdater updater =
+                                                                        template.unwrapUpdater(worldGen);
+                                                                if (updater != null) {
+                                                                    dimensions = updater.apply(worldGen, dimensions);
+                                                                }
+
+                                                                WorldDimensions.Complete completeDimensions =
+                                                                        dimensions.bake(registries.getLayer(
+                                                                                                          RegistryLayer.DIMENSIONS)
+                                                                                                  .lookupOrThrow(
+                                                                                                          Registries.LEVEL_STEM));
+                                                                registries =
+                                                                        registries.replaceFrom(RegistryLayer.DIMENSIONS,
+                                                                                               completeDimensions.dimensionsRegistryAccess());
+
+                                                                return new WorldStem(rm,
+                                                                                     dp,
+                                                                                     registries,
+                                                                                     new LevelDataAndDimensions.WorldDataAndGenSettings(
+                                                                                             new PrimaryLevelData(
+                                                                                                     levelSettings,
+                                                                                                     completeDimensions.specialWorldProperty(),
+                                                                                                     completeDimensions.lifecycle()),
+                                                                                             new WorldGenSettings(
+                                                                                                     template.options(),
+                                                                                                     dimensions)));
+                                                            });
                 result = createLoader(access, packRepository, worldStem, template.gameRules(), true);
             }
             failed = false;
@@ -168,17 +199,17 @@ public interface Pipeline
     /**
      * @see WorldOpenFlows#loadWorldDataBlocking(WorldLoader.PackConfig, WorldLoader.WorldDataSupplier, WorldLoader.ResultFactory)
      */
-    static <D> WorldStem createStemBlocking(
+    static <D, R> R loadWorldDataBlocking(
             Minecraft mc,
             WorldLoader.PackConfig packConfig,
             WorldLoader.WorldDataSupplier<D> worldDataGetter,
-            WorldLoader.ResultFactory<D, WorldStem> worldDataSupplier
+            WorldLoader.ResultFactory<D, R> worldDataSupplier
     ) throws InterruptedException, ExecutionException {
         long start = Util.getMillis();
         WorldLoader.InitConfig config = new WorldLoader.InitConfig(packConfig,
                                                                    Commands.CommandSelection.INTEGRATED,
                                                                    LevelBasedPermissionSet.GAMEMASTER);
-        CompletableFuture<WorldStem> resourceLoad =
+        CompletableFuture<R> resourceLoad =
                 WorldLoader.load(config, worldDataGetter, worldDataSupplier, Util.backgroundExecutor(), mc);
         mc.managedBlock(resourceLoad::isDone);
         long end = Util.getMillis();
