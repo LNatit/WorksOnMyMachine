@@ -133,7 +133,6 @@ public interface Pipeline
                                                                 WorldDimensions dimensions =
                                                                         presetHolder.value().createWorldDimensions();
 
-                                                                // TODO update with dimensionsUpdater
                                                                 var worldGen =
                                                                         registries.getLayer(RegistryLayer.WORLDGEN);
                                                                 WorldCreationContext.DimensionsUpdater updater =

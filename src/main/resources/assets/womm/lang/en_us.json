@@ -1,13 +1,3 @@
 {
-  "itemGroup.womm": "Example Mod Tab",
-  "block.womm.example_block": "Example Block",
-  "item.womm.example_item": "Example Item",
-
-  "womm.configuration.title": "Works On My Machine Configs",
-  "womm.configuration.section.womm.common.toml": "Works On My Machine Configs",
-  "womm.configuration.section.womm.common.toml.title": "Works On My Machine Configs",
-  "womm.configuration.items": "Item List",
-  "womm.configuration.logDirtBlock": "Log Dirt Block",
-  "womm.configuration.magicNumberIntroduction": "Magic Number Text",
-  "womm.configuration.magicNumber": "Magic Number"
+    "menu.exitToGame": "Exit to Game"
 }

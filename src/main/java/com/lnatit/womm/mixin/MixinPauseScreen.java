@@ -36,7 +36,7 @@ public class MixinPauseScreen
             T widget,
             int columnWidth
     ) {
-        if (!WOMMClient.isInWOMMWorld || !(widget instanceof Button)) {
+        if (WOMMClient.isCallbackEmpty() || !(widget instanceof Button)) {
             return instance.addChild(widget, columnWidth);
         }
 
@@ -44,9 +44,7 @@ public class MixinPauseScreen
         instance.addChild(
                 Button.builder(
                               EXIT_TO_GAME,
-                              button -> {
-
-                              }
+                              WOMMClient::returnToWorld
                       )
                       .width(BUTTON_WIDTH_HALF)
                       .build()
