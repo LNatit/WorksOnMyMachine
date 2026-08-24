@@ -1,3 +1,4 @@
 {
-    "menu.exitToGame": "返回存档"
+    "menu.backToGame": "返回存档",
+    "menu.backToServer": "返回服务器"
 }

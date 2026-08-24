@@ -14,6 +14,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -26,8 +27,12 @@ import javax.annotation.Nullable;
 @Mod(value = WOMM.MODID, dist = Dist.CLIENT)
 public class WOMMClient
 {
+    private static final Component BACK_TO_GAME = Component.translatable("menu.backToGame");
+    public static final Component BACK_TO_SERVER = Component.translatable("menu.backToServer");
+
     //    public static boolean isInWOMMWorld = false;
     public static Runnable returnCallback = null;
+    public static Component returnText = BACK_TO_GAME;
 
     public WOMMClient(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(WOMMClient::registerPayloadHandler);
@@ -85,6 +90,7 @@ public class WOMMClient
         Runnable callback = null;
 
         if (singleplayer != null) {
+            returnText = BACK_TO_GAME;
             callback = () -> mc.createWorldOpenFlows()
                                    .openWorld(singleplayer.storageSource.getLevelId(),
                                               () -> mc.setScreen(new TitleScreen()));
@@ -92,6 +98,7 @@ public class WOMMClient
         else {
             ServerData server = mc.getCurrentServer();
             if (server != null) {
+                returnText = BACK_TO_SERVER;
                 callback = () -> ConnectScreen.startConnecting(new TitleScreen(),
                                                                    mc,
                                                                    ServerAddress.parseString(server.ip),

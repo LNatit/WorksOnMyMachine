@@ -5,20 +5,15 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.LayoutElement;
 import net.minecraft.client.gui.screens.PauseScreen;
-import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(PauseScreen.class)
 public class MixinPauseScreen
 {
-    @Unique
-    private static final Component EXIT_TO_GAME = Component.translatable("menu.exitToGame");
-
     @Shadow
     @Final
     private static int BUTTON_WIDTH_HALF;
@@ -43,7 +38,7 @@ public class MixinPauseScreen
         ((Button) widget).setWidth(BUTTON_WIDTH_HALF);
         instance.addChild(
                 Button.builder(
-                              EXIT_TO_GAME,
+                              WOMMClient.returnText,
                               WOMMClient::returnToWorld
                       )
                       .width(BUTTON_WIDTH_HALF)

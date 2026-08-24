@@ -1,3 +1,4 @@
 {
-    "menu.exitToGame": "Exit to Game"
+    "menu.backToGame": "Exit to Game",
+    "menu.backToServer": "Exit to Server"
 }
