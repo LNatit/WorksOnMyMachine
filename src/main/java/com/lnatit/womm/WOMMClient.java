@@ -8,6 +8,7 @@ import com.lnatit.womm.pipeline.WorldPrepareException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -88,31 +89,42 @@ public class WOMMClient
      */
     private static Runnable snapshotAndDisconnect(Minecraft mc, @Nullable IntegratedServer singleplayer) {
         Runnable callback = null;
+        Screen title = new TitleScreen();
 
         if (singleplayer != null) {
             returnText = BACK_TO_GAME;
-            callback = () -> mc.createWorldOpenFlows()
-                                   .openWorld(singleplayer.storageSource.getLevelId(),
-                                              () -> mc.setScreen(new TitleScreen()));
+            callback = () -> {
+                disconnect(mc, true);
+                mc.createWorldOpenFlows()
+                  .openWorld(singleplayer.storageSource.getLevelId(),
+                             () -> mc.setScreen(title));
+            };
         }
         else {
             ServerData server = mc.getCurrentServer();
             if (server != null) {
                 returnText = BACK_TO_SERVER;
-                callback = () -> ConnectScreen.startConnecting(new TitleScreen(),
-                                                                   mc,
-                                                                   ServerAddress.parseString(server.ip),
-                                                                   server,
-                                                                   false,
-                                                                   null);
+                callback = () -> {
+                    disconnect(mc, true);
+                    ConnectScreen.startConnecting(title,
+                                                  mc,
+                                                  ServerAddress.parseString(server.ip),
+                                                  server,
+                                                  false,
+                                                  null);
+                };
             }
             WOMM.LOGGER.warn("Trying to snapshot an impossible world!");
         }
 
-        mc.getReportingContext()
-          .draftReportHandled(mc, mc.screen, () -> mc.disconnectFromWorld(ClientLevel.DEFAULT_QUIT_MESSAGE), false);
+        disconnect(mc, false);
 
         return callback;
+    }
+
+    private static void disconnect(Minecraft mc, boolean quitToTitle) {
+        mc.getReportingContext()
+          .draftReportHandled(mc, mc.screen, () -> mc.disconnectFromWorld(ClientLevel.DEFAULT_QUIT_MESSAGE), quitToTitle);
     }
 
     public static boolean isCallbackEmpty() {
