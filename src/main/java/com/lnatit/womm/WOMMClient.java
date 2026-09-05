@@ -18,14 +18,18 @@ import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import javax.annotation.Nullable;
 
 @Mod(value = WOMM.MODID, dist = Dist.CLIENT)
+@EventBusSubscriber(value = Dist.CLIENT, modid = WOMM.MODID)
 public class WOMMClient
 {
     private static final Component BACK_TO_GAME = Component.translatable("menu.backToGame");
@@ -138,5 +142,10 @@ public class WOMMClient
         returnCallback.run();
         returnCallback = null;
         WOMM.LOGGER.info("Returning to previous world...");
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        returnCallback = null;
     }
 }
